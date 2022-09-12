@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'dart:async';
+import 'package:http/http.dart';
 
 void main() async {
   /**
    * const double wi,hei pour fixé largeur,longeur réspectivement 
    * peut etre initialisé a partir d'une DB
    */
-  const double wi = 400;
-  const double hei = 700;
+  const double largeur = 400;
+  const double longeur = 700;
   WidgetsFlutterBinding.ensureInitialized();
   await windowManager.ensureInitialized();
 
   windowManager.waitUntilReadyToShow().then((_) async {
-    await windowManager.setSize(Size(wi, hei));
-    await windowManager.setMinimumSize(Size(wi, hei));
-    await windowManager.setMaximumSize(Size(wi, hei));
+    await windowManager.setSize(Size(largeur, longeur));
+    await windowManager.setMinimumSize(Size(largeur, longeur));
+    await windowManager.setMaximumSize(Size(largeur, longeur));
     await windowManager.setAsFrameless();
     await windowManager.center();
   });
@@ -65,18 +67,39 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  double _timer = 0;
+  late Timer _timer;
+  final int _counter = 4;
+  int _t = 0;
+  List<int> tacheSeconde = [5, 10, 7, 3, 14];
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      if (_timer == 10) _counter++;
+  void startTimer() {
+    var tempsAlloce = Duration(seconds: tacheSeconde[_t]);
+    _timer = Timer.periodic(tempsAlloce, (Timer timer) {
+      if (_counter == 0) {
+        setState(() {
+          print("closing");
+          timer.cancel();
+        });
+      } else {
+        setState(() {});
+        _t++;
+        if (_t == 4) {
+          _t = 0;
+        }
+      }
     });
+  }
+
+  @override
+  void initState() {
+    startTimer();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
   }
 
   @override
@@ -87,6 +110,14 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+    const List<String> pub = [
+      "https://www.delice.tn/wp-content/uploads/2021/12/LOGO-MENU.png",
+      "https://picsum.photos/250?image=9",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Orange-Fruit-Pieces.jpg/220px-Orange-Fruit-Pieces.jpg",
+      "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png",
+      "https://www.delice.tn/wp-content/uploads/2021/12/LOGO-MENU.png",
+    ];
+
     return Scaffold(
       // appBar: AppBar(
       //   // Here we take the value from the MyHomePage object that was created by
@@ -113,22 +144,13 @@ class _MyHomePageState extends State<MyHomePage> {
           // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Image.network("https://picsum.photos/250?image=9"),
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
+            Image.network(pub[_t]),
+            Text('$_t'),
+            Text("Testings lags"),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

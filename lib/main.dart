@@ -1,11 +1,16 @@
+import 'dart:developer';
+import 'dart:io';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/io_client.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dart:async';
 import 'package:http/http.dart';
 
 void main() async {
   /**
-   * const double wi,hei pour fixé largeur,longeur réspectivement 
+   * const double wi,hei pour fixé largeur,longeur réspectivement
    * peut etre initialisé a partir d'une DB
    */
   const double largeur = 400;
@@ -20,6 +25,7 @@ void main() async {
     await windowManager.setAsFrameless();
     await windowManager.center();
   });
+
   runApp(const MyApp());
 }
 
@@ -30,11 +36,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Pub App',
       theme: ThemeData(
         primarySwatch: Colors.red,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'pubApp'),
     );
   }
 }
@@ -50,37 +56,114 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late Timer _timer;
-  final int _counter = 4;
-  int _t = 0;
+  int _counter = 4;
+  bool update = true;
+  int nowPub = 0;
+  //int _t = 0;
+  late Socket socket;
   List<int> tacheSeconde = [5, 1, 10, 3, 14];
 
-  void startTimer() {
-    var tempsAlloce = Duration(seconds: tacheSeconde[_t]);
-    _timer = Timer.periodic(tempsAlloce, (Timer timer) {
-      if (_counter == 0) {
-        setState(() {
-          print("closing");
-          timer.cancel();
-        });
-      } else {
-        setState(() {});
-        _t++;
-        if (_t > 4) {
-          _t = 0;
-        }
-      }
+  void dataListenning() async {
+    Socket.connect("localhost", 9000).then((Socket sock) {
+      socket = sock;
+      socket.listen(dataHandler,
+          onError: errorHandler, onDone: doneHandler, cancelOnError: false);
+      socket.add(utf8.encode('hello there from lcd'));
+    }).catchError((Object e) {
+      print("Unable to connect: $e");
+      exit(1);
     });
+
+    //Connect standard in to the socket
+    stdin.listen(
+        (data) => socket.write('${String.fromCharCodes(data).trim()}\n'));
+  }
+  // Socket.connect("127.0.0.1", 9000).then((Socket sock) {
+  //   socket = sock;
+  //   print(socket);
+  //   print("socket paired");
+  //   socket.listen(
+  //     dataHandler,
+  //     onError: errorHandler,
+  //     cancelOnError: false,
+  //   );
+  //   socket.add(utf8.encode('hello'));
+  // }).catchError((Object e) {
+  //   print("Unable to connect : $e");
+  // });
+  //socket.add(utf8.encode('hello'));
+
+  // stdin.listen(
+  //     (data) => socket.write(new String.fromCharCodes(data).trim() + '\n'));
+
+  void dataHandler(data) {
+    print(String.fromCharCodes(data).trim());
+  }
+
+  void errorHandler(error, StackTrace trace) {
+    print(error);
+  }
+
+  void doneHandler() {
+    //socket.destroy();
+    //exit(0);
+  }
+
+  // void startTimer() {
+  //   var tempsAlloce = Duration(seconds: tacheSeconde[_t]);
+  //   _timer = Timer.periodic(tempsAlloce, (Timer timer) {
+  //     if (_counter == 0) {
+  //       setState(() {
+  //         print("closing");
+  //         timer.cancel();
+  //       });
+  //     } else {
+  //       setState(() {});
+  //       _t++;
+  //       if (_t > 4) {
+  //         _t = 0;
+  //       }
+  //     }
+  //   });
+  // }
+  void UpdatePub() async {}
+  void startTimer() {
+    print("Starting");
+    _timer = Timer(
+        Duration(minutes: 0, seconds: tacheSeconde[nowPub]),
+        () => {
+              print(_timer.tick),
+              if (_counter == 0)
+                {
+                  setState(() {
+                    _counter = 4;
+                    nowPub = 0;
+                    _timer.cancel();
+                    startTimer();
+                  })
+                }
+              else
+                {
+                  setState(() {
+                    nowPub++;
+                    _counter--;
+                    startTimer();
+                  })
+                }
+            });
   }
 
   @override
   void initState() {
     startTimer();
+    dataListenning();
     super.initState();
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    socket.destroy();
     super.dispose();
   }
 
@@ -105,8 +188,8 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Image.network(pub[_t]),
-            Text('$_t'),
+            Image.network(pub[nowPub]),
+            Text('$nowPub'),
             Text("Testings lags"),
           ],
         ),

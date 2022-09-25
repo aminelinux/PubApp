@@ -29,6 +29,49 @@ void main() async {
   runApp(const MyApp());
 }
 
+class Diaporama {
+  String name;
+  String date;
+
+  List<Taches>? tache;
+
+  Diaporama(this.name, this.date, [this.tache]);
+
+  factory Diaporama.fromJson(dynamic json) {
+    if (json['tache'] != null) {
+      var tacheObJson = json['tache'] as List;
+      List<Taches> _tache =
+          tacheObJson.map((tacheJson) => Taches.fromJson(tacheJson)).toList();
+
+      return Diaporama(json['name'] as String, json['date'] as String, _tache);
+    } else {
+      return Diaporama(json['name'] as String, json['date'] as String);
+    }
+  }
+  @override
+  String toString() {
+    return '{ ${this.name}, ${this.date}, ${this.tache} }';
+  }
+}
+
+class Taches {
+  String kindOf;
+  String link;
+  int periode;
+
+  Taches(this.kindOf, this.link, this.periode);
+
+  factory Taches.fromJson(dynamic json) {
+    return Taches(json['kindOf'] as String, json['link'] as String,
+        json['periode'] as int);
+  }
+
+  @override
+  String toString() {
+    return '{ ${this.kindOf}, ${this.link}, ${this.periode} }';
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -59,7 +102,6 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 4;
   bool update = true;
   int nowPub = 0;
-  //int _t = 0;
   late Socket socket;
   List<int> tacheSeconde = [5, 1, 10, 3, 14];
 
@@ -75,29 +117,21 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     //Connect standard in to the socket
-    stdin.listen(
-        (data) => socket.write('${String.fromCharCodes(data).trim()}\n'));
+    stdin.listen((data) {
+      socket.write('${String.fromCharCodes(data).trim()}\n');
+      print(data);
+    });
   }
-  // Socket.connect("127.0.0.1", 9000).then((Socket sock) {
-  //   socket = sock;
-  //   print(socket);
-  //   print("socket paired");
-  //   socket.listen(
-  //     dataHandler,
-  //     onError: errorHandler,
-  //     cancelOnError: false,
-  //   );
-  //   socket.add(utf8.encode('hello'));
-  // }).catchError((Object e) {
-  //   print("Unable to connect : $e");
-  // });
-  //socket.add(utf8.encode('hello'));
-
-  // stdin.listen(
-  //     (data) => socket.write(new String.fromCharCodes(data).trim() + '\n'));
 
   void dataHandler(data) {
     print(String.fromCharCodes(data).trim());
+
+    if (String.fromCharCodes(data).contains('Update')) {
+      print("update???????");
+      setState(() {
+        UpdatePub();
+      });
+    }
   }
 
   void errorHandler(error, StackTrace trace) {
@@ -109,24 +143,15 @@ class _MyHomePageState extends State<MyHomePage> {
     //exit(0);
   }
 
-  // void startTimer() {
-  //   var tempsAlloce = Duration(seconds: tacheSeconde[_t]);
-  //   _timer = Timer.periodic(tempsAlloce, (Timer timer) {
-  //     if (_counter == 0) {
-  //       setState(() {
-  //         print("closing");
-  //         timer.cancel();
-  //       });
-  //     } else {
-  //       setState(() {});
-  //       _t++;
-  //       if (_t > 4) {
-  //         _t = 0;
-  //       }
-  //     }
-  //   });
-  // }
-  void UpdatePub() async {}
+  void UpdatePub() async {
+    String testUpdate =
+        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 60}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 30}]}';
+
+    Diaporama complexTest = Diaporama.fromJson(jsonDecode(testUpdate));
+    print(complexTest.toString);
+    print(complexTest);
+  }
+
   void startTimer() {
     print("Starting");
     _timer = Timer(
@@ -157,6 +182,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     startTimer();
     dataListenning();
+    UpdatePub();
     super.initState();
   }
 

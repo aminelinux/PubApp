@@ -1,12 +1,11 @@
-import 'dart:developer';
+// ignore_for_file: unnecessary_this
+
 import 'dart:io';
 import 'dart:convert';
-
+import 'package:dart_vlc/dart_vlc.dart';
 import 'package:flutter/material.dart';
-import 'package:http/io_client.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dart:async';
-import 'package:http/http.dart';
 
 void main() async {
   /**
@@ -19,9 +18,9 @@ void main() async {
   await windowManager.ensureInitialized();
 
   windowManager.waitUntilReadyToShow().then((_) async {
-    await windowManager.setSize(Size(largeur, longeur));
-    await windowManager.setMinimumSize(Size(largeur, longeur));
-    await windowManager.setMaximumSize(Size(largeur, longeur));
+    await windowManager.setSize(const Size(largeur, longeur));
+    await windowManager.setMinimumSize(const Size(largeur, longeur));
+    await windowManager.setMaximumSize(const Size(largeur, longeur));
     await windowManager.setAsFrameless();
     await windowManager.center();
   });
@@ -48,6 +47,15 @@ class Diaporama {
       return Diaporama(json['name'] as String, json['date'] as String);
     }
   }
+
+  int tacheLength() {
+    if (tache != null) {
+      return tache!.length;
+    } else {
+      return 0;
+    }
+  }
+
   @override
   String toString() {
     return '{ ${this.name}, ${this.date}, ${this.tache} }';
@@ -98,6 +106,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Diaporama? complexTest;
   late Timer _timer;
   int _counter = 4;
   bool update = true;
@@ -129,7 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (String.fromCharCodes(data).contains('Update')) {
       print("update???????");
       setState(() {
-        UpdatePub();
+        updatePub();
       });
     }
   }
@@ -143,25 +152,28 @@ class _MyHomePageState extends State<MyHomePage> {
     //exit(0);
   }
 
-  void UpdatePub() async {
+  void updatePub() async {
     String testUpdate =
-        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 60}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 30}]}';
+        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 4}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 10}]}';
 
-    Diaporama complexTest = Diaporama.fromJson(jsonDecode(testUpdate));
+    complexTest = Diaporama.fromJson(jsonDecode(testUpdate));
     print(complexTest.toString);
     print(complexTest);
+    _counter = complexTest!.tacheLength() - 1;
+
+    startTimer();
   }
 
   void startTimer() {
     print("Starting");
     _timer = Timer(
-        Duration(minutes: 0, seconds: tacheSeconde[nowPub]),
+        Duration(minutes: 0, seconds: complexTest!.tache![nowPub].periode),
         () => {
               print(_timer.tick),
               if (_counter == 0)
                 {
                   setState(() {
-                    _counter = 4;
+                    _counter = complexTest!.tacheLength() - 1;
                     nowPub = 0;
                     _timer.cancel();
                     startTimer();
@@ -180,9 +192,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    startTimer();
+    updatePub();
     dataListenning();
-    UpdatePub();
     super.initState();
   }
 
@@ -201,22 +212,18 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    const List<String> pub = [
-      "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg",
-      "https://picsum.photos/250?image=9",
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Orange-Fruit-Pieces.jpg/220px-Orange-Fruit-Pieces.jpg",
-      "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png",
-      "https://www.delice.tn/wp-content/uploads/2021/12/LOGO-MENU.png",
-    ];
 
     return Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Image.network(pub[nowPub]),
+            if (complexTest!.tache![nowPub].kindOf.contains("photo"))
+              Image.network(complexTest!.tache![nowPub].link),
+            if (complexTest!.tache![nowPub].kindOf.contains("video"))
+              Image.network(complexTest!.tache![nowPub].link),
             Text('$nowPub'),
-            Text("Testings lags"),
+            const Text("Testings lags"),
           ],
         ),
       ),

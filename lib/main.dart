@@ -25,6 +25,8 @@ void main() async {
     await windowManager.center();
   });
 
+  DartVLC.initialize();
+
   runApp(const MyApp());
 }
 
@@ -112,7 +114,10 @@ class _MyHomePageState extends State<MyHomePage> {
   bool update = true;
   int nowPub = 0;
   late Socket socket;
-  List<int> tacheSeconde = [5, 1, 10, 3, 14];
+  Player player =
+      Player(id: 10, videoDimensions: const VideoDimensions(400, 700));
+  Media? vid;
+  //List<int> tacheSeconde = [5, 1, 10, 3, 14];
 
   void dataListenning() async {
     Socket.connect("localhost", 9000).then((Socket sock) {
@@ -154,12 +159,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void updatePub() async {
     String testUpdate =
-        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 4}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 10}]}';
+        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 4}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 10},{"kindOf": "video", "link": "http://localhost/pubserver/videos/ERA%20-%20Ameno.mp4","periode" : 230}]}';
 
     complexTest = Diaporama.fromJson(jsonDecode(testUpdate));
     print(complexTest.toString);
     print(complexTest);
     _counter = complexTest!.tacheLength() - 1;
+    if (complexTest!.tache![nowPub].kindOf.contains('video')) {
+      vid = Media.network(complexTest!.tache![nowPub].link);
+    }
 
     startTimer();
   }
@@ -184,6 +192,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   setState(() {
                     nowPub++;
                     _counter--;
+                    if (complexTest!.tache![nowPub].kindOf.contains('video')) {
+                      vid = Media.network(complexTest!.tache![nowPub].link);
+                    }
+                    player
+                        .open(Media.network(complexTest!.tache![nowPub].link));
                     startTimer();
                   })
                 }
@@ -221,8 +234,13 @@ class _MyHomePageState extends State<MyHomePage> {
             if (complexTest!.tache![nowPub].kindOf.contains("photo"))
               Image.network(complexTest!.tache![nowPub].link),
             if (complexTest!.tache![nowPub].kindOf.contains("video"))
-              Image.network(complexTest!.tache![nowPub].link),
-            Text('$nowPub'),
+              Video(
+                player: player,
+                width: 400,
+                height: 700,
+              ),
+            if (complexTest!.tache![nowPub].kindOf.contains("text"))
+              Text(complexTest!.tache![nowPub].link),
             const Text("Testings lags"),
           ],
         ),

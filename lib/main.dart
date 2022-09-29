@@ -6,7 +6,9 @@ import 'package:dart_vlc/dart_vlc.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'dart:async';
+import 'package:http/http.dart' as http;
 
+late Diaporama complexTest;
 void main() async {
   /**
    * const double wi,hei pour fixé largeur,longeur réspectivement
@@ -24,18 +26,62 @@ void main() async {
     await windowManager.setAsFrameless();
     await windowManager.center();
   });
-
+  //video pub plugins initializer
   DartVLC.initialize();
 
+  UpdatePub pubInit = UpdatePub();
+  print("main complextest");
+  print(pubInit.complexTest1);
+  complexTest = pubInit.complexTest1;
   runApp(const MyApp());
 }
 
+class UpdatePub {
+  Diaporama complexTest1 = Diaporama('initDiap', 'intDate', [
+    Taches(
+        "photo",
+        "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg",
+        20)
+  ]);
+  late http.Response response;
+
+  UpdatePub() {
+    update();
+  }
+
+  void update() async {
+    try {
+      response = await http
+          .get((Uri.parse("http://localhost/pubserver/getDiapo.php")));
+      if (response.statusCode == 200) {
+        print('if response ok .');
+        print(response.body);
+        final diap = json.decode(response.body)[0]["pub"];
+        //var x = diap[0];
+
+        print('******** json.decode ==');
+        print(diap);
+        print('**********');
+        //print(x);
+
+        complexTest = Diaporama.fromJson(jsonDecode(diap));
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+}
+
 class Diaporama {
-  String name;
-  String date;
+  String name = "init";
+  String date = "init";
 
-  List<Taches>? tache;
-
+  List<Taches>? tache = [
+    Taches(
+        "photo",
+        "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg",
+        10)
+  ];
   Diaporama(this.name, this.date, [this.tache]);
 
   factory Diaporama.fromJson(dynamic json) {
@@ -52,7 +98,7 @@ class Diaporama {
 
   int tacheLength() {
     if (tache != null) {
-      return tache!.length;
+      return tache!.length - 1;
     } else {
       return 0;
     }
@@ -65,9 +111,10 @@ class Diaporama {
 }
 
 class Taches {
-  String kindOf;
-  String link;
-  int periode;
+  String kindOf = "photo";
+  String link =
+      "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg";
+  int periode = 20;
 
   Taches(this.kindOf, this.link, this.periode);
 
@@ -108,7 +155,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Diaporama? complexTest;
+  //Diaporama? complexTest;
   late Timer _timer;
   int _counter = 4;
   bool update = true;
@@ -157,16 +204,18 @@ class _MyHomePageState extends State<MyHomePage> {
     //exit(0);
   }
 
-  void updatePub() async {
-    String testUpdate =
-        '{"name": "test Diaporam", "date": "23/09/2022", "tache": [{"kindOf": "photo", "link": "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg","periode" : 4}, {"kindOf": "photo", "link": "https://www.tunisienumerique.com/wp-content/uploads/2019/08/Tunisie-Telecom.png","periode" : 10},{"kindOf": "video", "link": "http://localhost/pubserver/videos/ERA%20-%20Ameno.mp4","periode" : 230}]}';
-
-    complexTest = Diaporama.fromJson(jsonDecode(testUpdate));
+  Future updatePub() async {
+    UpdatePub pubInit = UpdatePub();
+    print("main complextest");
+    print(pubInit.complexTest1);
+    complexTest = pubInit.complexTest1;
     print(complexTest.toString);
     print(complexTest);
-    _counter = complexTest!.tacheLength() - 1;
-    if (complexTest!.tache![nowPub].kindOf.contains('video')) {
-      vid = Media.network(complexTest!.tache![nowPub].link);
+    print(complexTest.toString);
+    print(complexTest);
+    _counter = complexTest.tacheLength();
+    if (complexTest.tache![nowPub].kindOf.contains('video')) {
+      vid = Media.network(complexTest.tache![nowPub].link);
     }
 
     startTimer();
@@ -175,13 +224,13 @@ class _MyHomePageState extends State<MyHomePage> {
   void startTimer() {
     print("Starting");
     _timer = Timer(
-        Duration(minutes: 0, seconds: complexTest!.tache![nowPub].periode),
+        Duration(minutes: 0, seconds: complexTest.tache![nowPub].periode),
         () => {
               print(_timer.tick),
               if (_counter == 0)
                 {
                   setState(() {
-                    _counter = complexTest!.tacheLength() - 1;
+                    _counter = complexTest.tacheLength();
                     nowPub = 0;
                     _timer.cancel();
                     startTimer();
@@ -192,11 +241,10 @@ class _MyHomePageState extends State<MyHomePage> {
                   setState(() {
                     nowPub++;
                     _counter--;
-                    if (complexTest!.tache![nowPub].kindOf.contains('video')) {
-                      vid = Media.network(complexTest!.tache![nowPub].link);
+                    if (complexTest.tache![nowPub].kindOf.contains('video')) {
+                      vid = Media.network(complexTest.tache![nowPub].link);
                     }
-                    player
-                        .open(Media.network(complexTest!.tache![nowPub].link));
+                    player.open(Media.network(complexTest.tache![nowPub].link));
                     startTimer();
                   })
                 }
@@ -214,6 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     _timer.cancel();
     socket.destroy();
+
     super.dispose();
   }
 
@@ -231,16 +280,16 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            if (complexTest!.tache![nowPub].kindOf.contains("photo"))
-              Image.network(complexTest!.tache![nowPub].link),
-            if (complexTest!.tache![nowPub].kindOf.contains("video"))
+            if (complexTest.tache![nowPub].kindOf.contains("photo"))
+              Image.network(complexTest.tache![nowPub].link),
+            if (complexTest.tache![nowPub].kindOf.contains("video"))
               Video(
                 player: player,
                 width: 400,
                 height: 700,
               ),
-            if (complexTest!.tache![nowPub].kindOf.contains("text"))
-              Text(complexTest!.tache![nowPub].link),
+            if (complexTest.tache![nowPub].kindOf.contains("text"))
+              Text(complexTest.tache![nowPub].link),
             const Text("Testings lags"),
           ],
         ),

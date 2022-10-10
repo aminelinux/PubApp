@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 
 late Diaporama complexTest;
+late UpdatePub pubInit;
 void main() async {
   /**
    * const double wi,hei pour fixé largeur,longeur réspectivement
@@ -27,11 +28,9 @@ void main() async {
     await windowManager.center();
   });
   //video pub plugins initializer
-  DartVLC.initialize();
+  await DartVLC.initialize();
 
-  UpdatePub pubInit = UpdatePub();
-  print("main complextest");
-  print(pubInit.complexTest1);
+  pubInit = UpdatePub();
   complexTest = pubInit.complexTest1;
   runApp(const MyApp());
 }
@@ -54,16 +53,7 @@ class UpdatePub {
       response = await http
           .get((Uri.parse("http://localhost/pubserver/getDiapo.php")));
       if (response.statusCode == 200) {
-        print('if response ok .');
-        print(response.body);
         final diap = json.decode(response.body)[0]["pub"];
-        //var x = diap[0];
-
-        print('******** json.decode ==');
-        print(diap);
-        print('**********');
-        //print(x);
-
         complexTest = Diaporama.fromJson(jsonDecode(diap));
       }
     } catch (e) {
@@ -76,12 +66,7 @@ class Diaporama {
   String name = "init";
   String date = "init";
 
-  List<Taches>? tache = [
-    Taches(
-        "photo",
-        "http://localhost/pubserver/images/bison-3840x2160-grand-teton-national-park-wyoming-usa-bing-microsoft-23142.jpg",
-        10)
-  ];
+  List<Taches>? tache = [];
   Diaporama(this.name, this.date, [this.tache]);
 
   factory Diaporama.fromJson(dynamic json) {
@@ -157,14 +142,13 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   //Diaporama? complexTest;
   late Timer _timer;
-  int _counter = 4;
+  int _counter = complexTest.tacheLength();
   bool update = true;
   int nowPub = 0;
   late Socket socket;
   Player player =
       Player(id: 10, videoDimensions: const VideoDimensions(400, 700));
   Media? vid;
-  //List<int> tacheSeconde = [5, 1, 10, 3, 14];
 
   void dataListenning() async {
     Socket.connect("localhost", 9000).then((Socket sock) {
@@ -180,7 +164,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //Connect standard in to the socket
     stdin.listen((data) {
       socket.write('${String.fromCharCodes(data).trim()}\n');
-      print(data);
+      //print(data);
     });
   }
 
@@ -205,20 +189,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future updatePub() async {
+    // _counter = complexTest.tacheLength();
+    //initState();
+
     UpdatePub pubInit = UpdatePub();
-    print("main complextest");
-    print(pubInit.complexTest1);
     complexTest = pubInit.complexTest1;
-    print(complexTest.toString);
-    print(complexTest);
-    print(complexTest.toString);
-    print(complexTest);
     _counter = complexTest.tacheLength();
-    if (complexTest.tache![nowPub].kindOf.contains('video')) {
-      vid = Media.network(complexTest.tache![nowPub].link);
-    }
 
     startTimer();
+    dataListenning();
+
+    DartVLC.initialize();
   }
 
   void startTimer() {
@@ -253,16 +234,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    updatePub();
+    UpdatePub pubInit = UpdatePub();
+    complexTest = pubInit.complexTest1;
+    _counter = complexTest.tacheLength();
+
+    startTimer();
     dataListenning();
     super.initState();
   }
 
   @override
   void dispose() {
+    complexTest.tache?.clear();
+
+    print("cleared ?????????");
+    DartVLC.initialize();
     _timer.cancel();
     socket.destroy();
-
+    // UpdatePub pubInit = UpdatePub();
+    // complexTest = pubInit.complexTest1;
     super.dispose();
   }
 
